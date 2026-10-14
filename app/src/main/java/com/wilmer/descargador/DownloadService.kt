@@ -117,14 +117,16 @@ class DownloadService : Service() {
     private fun friendlyError(e: Exception): String {
         val msg = e.message.orEmpty()
         val line = msg.lines().lastOrNull { it.startsWith("ERROR:") }?.removePrefix("ERROR:")?.trim() ?: msg
-        return when {
+        val hint = when {
             listOf("login", "cookies", "sign in", "private", "authentication").any { line.contains(it, true) } ->
-                "Esta publicación pide iniciar sesión. Abre la app y entra con tu cuenta en esa red."
+                "La red bloqueó la descarga sin cuenta."
             line.contains("Unsupported URL", true) -> "Ese enlace no tiene un video que se pueda descargar."
-            line.contains("Unable to resolve host", true) || line.contains("network", true) ->
-                "Sin conexión a internet."
-            else -> line.take(300).ifBlank { "Error desconocido" }
+            line.contains("Unable to resolve host", true) -> "Sin conexión a internet."
+            else -> null
         }
+        // El detalle original de yt-dlp ayuda a diagnosticar qué red falla y por qué.
+        val detail = line.take(400).ifBlank { "Error desconocido" }
+        return if (hint != null) "$hint\n\nDetalle: $detail" else detail
     }
 
     private fun progressNotification(text: String, percent: Int) =
