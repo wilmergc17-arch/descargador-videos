@@ -13,7 +13,7 @@ object Cookies {
         "instagram" to "https://www.instagram.com",
         "facebook" to "https://www.facebook.com",
         "x" to "https://x.com",
-        "tiktok" to "https://www.tiktok.com",
+        "tiktok" to "https://www.tiktok.com/login",
     )
 
     private fun file(context: Context) = File(context.filesDir, "cookies.txt")
@@ -27,7 +27,7 @@ object Cookies {
         val lines = StringBuilder("# Netscape HTTP Cookie File\n")
         for (url in SITES.values) {
             val raw = cm.getCookie(url) ?: continue
-            val domain = "." + url.substringAfter("://").removePrefix("www.")
+            val domain = "." + url.substringAfter("://").substringBefore("/").removePrefix("www.")
             for (pair in raw.split(";")) {
                 val name = pair.substringBefore("=").trim()
                 val value = pair.substringAfter("=", "").trim()

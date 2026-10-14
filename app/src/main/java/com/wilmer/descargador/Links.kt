@@ -62,7 +62,10 @@ object Links {
                 try {
                     val code = conn.responseCode
                     if (code in 300..399) {
-                        val location = conn.getHeaderField("Location")?.let { URL(URL(url), it).toString() }
+                        val raw = conn.getHeaderField("Location")
+                        // TikTok a veces redirige a su app (snssdk1233://aweme/detail/<id>…); de ahí sale el id del video.
+                        raw?.let { appLinkToWeb(it) }?.let { return it }
+                        val location = raw?.let { runCatching { URL(URL(url), it).toString() }.getOrNull() }
                         if (location != null && Uri.parse(location).host?.lowercase() !in STORES) return location
                     } else if (code in 200..299) {
                         val html = conn.inputStream.bufferedReader().use { r ->
@@ -79,6 +82,15 @@ object Links {
             }
         }
         return null
+    }
+
+    private val AWEME_ID = Regex("""aweme/detail/(\d{8,})""")
+
+    /** Convierte un enlace de app de TikTok (snssdk…://aweme/detail/<id>) en el enlace web del video. */
+    fun appLinkToWeb(link: String): String? {
+        if (link.startsWith("http")) return null
+        val id = AWEME_ID.find(link)?.groupValues?.get(1) ?: return null
+        return "https://www.tiktok.com/@i/video/$id"
     }
 
     private val VIDEO_IN_HTML = Regex("""https://(?:www|m)\.tiktok\.com/@[^"'\s/?]+/(?:video|photo)/\d{8,}""")

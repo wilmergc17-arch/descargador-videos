@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.webkit.CookieManager
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
@@ -22,11 +23,21 @@ class LoginActivity : AppCompatActivity() {
         web = WebView(this)
         web.settings.javaScriptEnabled = true
         web.settings.domStorageEnabled = true
-        web.webViewClient = WebViewClient()
+        val start = intent.getStringExtra(EXTRA_URL) ?: "https://www.instagram.com"
+        // TikTok en móvil intenta abrir su app; como navegador de escritorio deja iniciar sesión en la web.
+        if (start.contains("tiktok")) web.settings.userAgentString = Http.DESKTOP_UA
+        web.settings.loadWithOverviewMode = true
+        web.settings.useWideViewPort = true
+        web.webViewClient = object : WebViewClient() {
+            override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+                val url = request.url.toString()
+                return !url.startsWith("http") || Links.isAppStore(url)
+            }
+        }
         CookieManager.getInstance().setAcceptCookie(true)
         CookieManager.getInstance().setAcceptThirdPartyCookies(web, true)
         setContentView(web)
-        web.loadUrl(intent.getStringExtra(EXTRA_URL) ?: "https://www.instagram.com")
+        web.loadUrl(start)
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
