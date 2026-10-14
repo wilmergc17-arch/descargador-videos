@@ -1,6 +1,7 @@
 package com.wilmer.descargador
 
 import android.content.Context
+import android.net.Uri
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -12,7 +13,10 @@ import java.io.IOException
  * instances.cobalt.best y se guarda un día en caché; se prueban por orden de puntuación.
  */
 object CobaltApi {
-    private const val LIST_URL = "https://instances.cobalt.best/api/instances.json"
+    private val LIST_URLS = listOf(
+        "https://instances.cobalt.best/api/instances.json",
+        "https://cobalt.directory/api/working?type=api",
+    )
     private const val CACHE_MS = 24 * 60 * 60 * 1000L
     private const val MAX_TRIES = 6
 
@@ -62,32 +66,42 @@ object CobaltApi {
         }
     }
 
-    /** URLs de API de los servidores en línea, mejor puntuados primero. */
+    /** URLs de API de los servidores en línea, mejor puntuados primero. Prueba dos directorios públicos. */
     private fun instances(context: Context): List<String> {
-        val cache = File(context.cacheDir, "cobalt-instancias.json")
-        val text = if (cache.exists() && System.currentTimeMillis() - cache.lastModified() < CACHE_MS) {
-            cache.readText()
-        } else {
+        val cache = File(context.cacheDir, "cobalt-instancias.txt")
+        if (cache.exists() && System.currentTimeMillis() - cache.lastModified() < CACHE_MS) {
+            cache.readLines().filter { it.isNotBlank() }.takeIf { it.isNotEmpty() }?.let { return it }
+        }
+        val errors = mutableListOf<String>()
+        for (source in LIST_URLS) {
             try {
-                Http.get(LIST_URL, mapOf("User-Agent" to Http.DESKTOP_UA, "Accept" to "application/json"))
-                    .also { cache.writeText(it) }
+                val text = Http.get(source, mapOf("User-Agent" to Http.DESKTOP_UA, "Accept" to "application/json"))
+                val list = parse(text)
+                if (list.isNotEmpty()) {
+                    cache.writeText(list.joinToString("\n"))
+                    return list
+                }
+                errors += "${Uri.parse(source).host}: vacía"
             } catch (e: Exception) {
-                if (cache.exists()) cache.readText() else throw IOException("lista de servidores: ${e.message}")
+                errors += "${Uri.parse(source).host}: ${e.message?.take(100)}"
             }
         }
-        val array = text.trim().let {
-            if (it.startsWith("[")) JSONArray(it) else JSONObject(it).optJSONArray("instances") ?: JSONArray()
+        throw IOException("lista de servidores: " + errors.joinToString(" | "))
+    }
+
+    private fun parse(text: String): List<String> {
+        val trimmed = text.trim()
+        val array = when {
+            trimmed.startsWith("[") -> JSONArray(trimmed)
+            else -> JSONObject(trimmed).let { o ->
+                o.optJSONArray("instances") ?: o.optJSONArray("data") ?: o.optJSONArray("results") ?: JSONArray()
+            }
         }
-        val list = (0 until array.length()).mapNotNull { array.optJSONObject(it) }
+        return (0 until array.length()).mapNotNull { array.optJSONObject(it) }
             .filter { isOnline(it) && !needsAuth(it) }
             .sortedByDescending { it.optDouble("score", 0.0) }
             .mapNotNull { apiUrl(it) }
             .distinct()
-        if (list.isEmpty()) {
-            cache.delete()
-            throw IOException("lista de servidores vacía (${array.length()} entradas)")
-        }
-        return list
     }
 
     private fun isOnline(o: JSONObject): Boolean = when (val online = o.opt("online")) {
@@ -100,7 +114,8 @@ object CobaltApi {
         o.optBoolean("turnstile", false) || o.optBoolean("auth", false) || o.optBoolean("apiKey", false)
 
     private fun apiUrl(o: JSONObject): String? {
-        val api = o.optString("api").ifBlank { return null }
+        val api = listOf("api", "api_url", "url", "host").map { o.optString(it) }.firstOrNull { it.isNotBlank() }
+            ?: return null
         if (api.startsWith("http")) return api.trimEnd('/') + "/"
         val protocol = o.optString("protocol").ifBlank { "https" }
         return "$protocol://${api.trimEnd('/')}/"

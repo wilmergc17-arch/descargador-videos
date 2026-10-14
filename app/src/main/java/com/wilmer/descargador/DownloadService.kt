@@ -98,6 +98,15 @@ class DownloadService : Service() {
         val methods = buildList<Pair<String, () -> Unit>> {
             if (referer == null && (TikTokApi.handles(url) || TikTokApi.handles(sharedUrl))) add("TikTok" to { TikTokApi.download(if (TikTokApi.handles(url)) url else sharedUrl, dir, onProgress); Unit })
             if (referer == null && !audioOnly && XApi.handles(url)) add("X" to { XApi.download(url, dir, onProgress); Unit })
+            if (referer == null && !audioOnly && OkRuApi.handles(url)) add("Ok.ru" to {
+                try {
+                    OkRuApi.download(url, dir, onProgress)
+                } catch (e: OkRuApi.HlsOnly) {
+                    // Solo hay stream HLS: yt-dlp lo baja y une con ffmpeg.
+                    runYtDlp(e.url, false, "https://ok.ru/", dir, jobId, onProgress)
+                }
+                Unit
+            })
             add("yt-dlp" to {
                 try {
                     runYtDlp(url, audioOnly, referer, dir, jobId, onProgress)

@@ -157,8 +157,12 @@ class BrowserActivity : AppCompatActivity() {
             """\.(mp4|m4v|mov|webm|m3u8|mpd)(\?|#|$)|mime=video|/videoplayback\?""", RegexOption.IGNORE_CASE
         )
 
+        // CDN de Ok.ru/VK: los videos no llevan extensión, solo parámetros (…okcdn.ru/?expires=…&type=3…).
+        private val CDN_VIDEO = Regex("""^https://[^/]+\.(okcdn\.ru|mycdn\.me|vkuser\.net|vkuservideo\.net)/.*expires=""")
+
         fun isMedia(url: String): Boolean =
-            url.startsWith("http") && MEDIA.containsMatchIn(url) && !url.contains(".m4s", true)
+            url.startsWith("http") && !url.contains(".m4s", true) &&
+                (MEDIA.containsMatchIn(url) || CDN_VIDEO.containsMatchIn(url))
 
         // Revisa cada 2 segundos las etiquetas <video> de la página por si el video no pasa por la red de forma visible.
         private const val SCAN_JS = """
