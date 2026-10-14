@@ -76,6 +76,12 @@
             android:textSize="13sp" />
 
         <Button
+            android:id="@+id/loginTiktok"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="TikTok (videos para mayores de 18)" />
+
+        <Button
             android:id="@+id/loginInstagram"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

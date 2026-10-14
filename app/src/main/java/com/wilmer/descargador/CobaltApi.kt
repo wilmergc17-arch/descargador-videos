@@ -18,7 +18,6 @@ object CobaltApi {
 
     fun download(context: Context, url: String, audioOnly: Boolean, dir: File, onProgress: (Int) -> Unit): List<File> {
         val instances = instances(context)
-        if (instances.isEmpty()) throw IOException("No hay servidores de respaldo disponibles")
         var lastError: Exception? = null
         for (api in instances.take(MAX_TRIES)) {
             try {
@@ -70,19 +69,25 @@ object CobaltApi {
             cache.readText()
         } else {
             try {
-                Http.get(LIST_URL).also { cache.writeText(it) }
+                Http.get(LIST_URL, mapOf("User-Agent" to Http.DESKTOP_UA, "Accept" to "application/json"))
+                    .also { cache.writeText(it) }
             } catch (e: Exception) {
-                if (cache.exists()) cache.readText() else return emptyList()
+                if (cache.exists()) cache.readText() else throw IOException("lista de servidores: ${e.message}")
             }
         }
         val array = text.trim().let {
             if (it.startsWith("[")) JSONArray(it) else JSONObject(it).optJSONArray("instances") ?: JSONArray()
         }
-        return (0 until array.length()).mapNotNull { array.optJSONObject(it) }
+        val list = (0 until array.length()).mapNotNull { array.optJSONObject(it) }
             .filter { isOnline(it) && !needsAuth(it) }
             .sortedByDescending { it.optDouble("score", 0.0) }
             .mapNotNull { apiUrl(it) }
             .distinct()
+        if (list.isEmpty()) {
+            cache.delete()
+            throw IOException("lista de servidores vacía (${array.length()} entradas)")
+        }
+        return list
     }
 
     private fun isOnline(o: JSONObject): Boolean = when (val online = o.opt("online")) {

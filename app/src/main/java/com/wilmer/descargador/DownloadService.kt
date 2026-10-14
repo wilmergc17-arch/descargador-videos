@@ -117,6 +117,7 @@ class DownloadService : Service() {
                     showProgress(if (errors.isEmpty()) "Descargando…" else "Probando otro método…", -1)
                     method()
                     if (downloadedFiles(dir).isNotEmpty()) break
+                    throw java.io.IOException("terminó sin archivos")
                 } catch (e: YoutubeDL.CanceledException) {
                     throw e
                 } catch (e: InterruptedException) {
@@ -134,7 +135,7 @@ class DownloadService : Service() {
                 val main = errors.firstOrNull { it.first == "yt-dlp" }?.second ?: errors.firstOrNull()?.second
                 // Resumen de cada método para poder diagnosticar desde una captura.
                 val others = errors.filter { it.second !== main }
-                    .joinToString("\n") { (name, e) -> "• $name: ${e.message?.lines()?.lastOrNull { it.isNotBlank() }?.take(120)}" }
+                    .joinToString("\n") { (name, e) -> "• $name: ${e.message?.lines()?.lastOrNull { it.isNotBlank() }?.take(200)}" }
                 val message = (main?.let { friendlyError(it) } ?: "No se encontró ningún archivo") +
                         (if (others.isNotEmpty()) "\n\n$others" else "")
                 notifyFailure(url, referer, message)
@@ -199,7 +200,7 @@ class DownloadService : Service() {
         val line = msg.lines().lastOrNull { it.startsWith("ERROR:") }?.removePrefix("ERROR:")?.trim() ?: msg
         val hint = when {
             listOf("login", "cookies", "sign in", "private", "authentication").any { line.contains(it, true) } ->
-                "La red bloqueó la descarga sin cuenta."
+                "La red bloqueó la descarga sin cuenta (en TikTok suele ser un video marcado para adultos)."
             line.contains("Unsupported URL", true) -> "Ese enlace no tiene un video que se pueda descargar."
             line.contains("Unable to resolve host", true) -> "Sin conexión a internet."
             else -> null

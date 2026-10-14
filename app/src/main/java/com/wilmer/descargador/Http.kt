@@ -7,6 +7,8 @@ import java.net.URL
 
 /** Peticiones HTTP simples para las APIs de respaldo y la descarga directa de archivos. */
 object Http {
+    const val DESKTOP_UA =
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
     const val UA =
         "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Mobile Safari/537.36"
 
@@ -39,6 +41,19 @@ object Http {
             val stream = if (conn.responseCode in 200..299) conn.inputStream else conn.errorStream
                 ?: throw IOException("HTTP ${conn.responseCode} en ${host(url)}")
             return stream.bufferedReader().use { it.readText() }
+        } finally {
+            conn.disconnect()
+        }
+    }
+
+    fun postForm(url: String, body: String): String {
+        val conn = open(url, mapOf("Content-Type" to "application/x-www-form-urlencoded; charset=UTF-8"))
+        try {
+            conn.requestMethod = "POST"
+            conn.doOutput = true
+            conn.outputStream.use { it.write(body.toByteArray()) }
+            if (conn.responseCode !in 200..299) throw IOException("HTTP ${conn.responseCode} en ${host(url)}")
+            return conn.inputStream.bufferedReader().use { it.readText() }
         } finally {
             conn.disconnect()
         }

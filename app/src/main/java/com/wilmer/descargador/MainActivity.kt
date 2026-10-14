@@ -49,6 +49,7 @@ class MainActivity : AppCompatActivity() {
             startActivity(BrowserActivity.intent(this, Links.extract(text) ?: text.ifBlank { "https://www.google.com" }))
         }
 
+        findViewById<Button>(R.id.loginTiktok).setOnClickListener { LoginActivity.open(this, Cookies.SITES["tiktok"]!!) }
         findViewById<Button>(R.id.loginInstagram).setOnClickListener { LoginActivity.open(this, Cookies.SITES["instagram"]!!) }
         findViewById<Button>(R.id.loginFacebook).setOnClickListener { LoginActivity.open(this, Cookies.SITES["facebook"]!!) }
         findViewById<Button>(R.id.loginX).setOnClickListener { LoginActivity.open(this, Cookies.SITES["x"]!!) }

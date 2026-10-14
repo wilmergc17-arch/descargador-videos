@@ -13,6 +13,7 @@ object Cookies {
         "instagram" to "https://www.instagram.com",
         "facebook" to "https://www.facebook.com",
         "x" to "https://x.com",
+        "tiktok" to "https://www.tiktok.com",
     )
 
     private fun file(context: Context) = File(context.filesDir, "cookies.txt")
