@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Además de los certificados del sistema, confía en la lista de Mozilla incluida en la app.
+     Los teléfonos con Android viejo no traen raíces nuevas (p. ej. ISRG Root X2) y fallan con
+     "Trust anchor for certification path not found". -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="@raw/cacert" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

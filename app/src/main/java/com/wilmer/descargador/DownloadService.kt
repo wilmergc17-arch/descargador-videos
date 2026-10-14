@@ -95,7 +95,7 @@ class DownloadService : Service() {
         }
 
         val methods = buildList<Pair<String, () -> Unit>> {
-            if (referer == null && !audioOnly && TikTokApi.handles(url)) add("TikTok" to { TikTokApi.download(url, dir, onProgress); Unit })
+            if (referer == null && (TikTokApi.handles(url) || TikTokApi.handles(sharedUrl))) add("TikTok" to { TikTokApi.download(if (TikTokApi.handles(url)) url else sharedUrl, dir, onProgress); Unit })
             if (referer == null && !audioOnly && XApi.handles(url)) add("X" to { XApi.download(url, dir, onProgress); Unit })
             add("yt-dlp" to { runYtDlp(url, audioOnly, referer, dir, jobId, onProgress); Unit })
             if (referer == null) {
@@ -136,8 +136,10 @@ class DownloadService : Service() {
                 // Resumen de cada método para poder diagnosticar desde una captura.
                 val others = errors.filter { it.second !== main }
                     .joinToString("\n") { (name, e) -> "• $name: ${e.message?.lines()?.lastOrNull { it.isNotBlank() }?.take(200)}" }
+                val tried = "Probado: ${methods.joinToString { it.first }}\nEnlace: $sharedUrl" +
+                        (if (url != sharedUrl) " → $url" else "")
                 val message = (main?.let { friendlyError(it) } ?: "No se encontró ningún archivo") +
-                        (if (others.isNotEmpty()) "\n\n$others" else "")
+                        (if (others.isNotEmpty()) "\n\n$others" else "") + "\n\n$tried"
                 notifyFailure(url, referer, message)
                 return
             }

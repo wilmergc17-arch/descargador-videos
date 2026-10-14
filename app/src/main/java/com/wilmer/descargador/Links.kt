@@ -49,23 +49,39 @@ object Links {
         return host.endsWith("tiktok.com") && !TIKTOK_ID.containsMatchIn(path)
     }
 
-    private fun nextHop(url: String): String? = try {
-        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
-            instanceFollowRedirects = false
-            connectTimeout = 10_000
-            readTimeout = 10_000
-            setRequestProperty("User-Agent", DESKTOP_UA)
+    /** Siguiente salto de la redirección; si la página responde 200, busca dentro el enlace real del video. */
+    private fun nextHop(url: String): String? {
+        for (ua in listOf(DESKTOP_UA, Http.UA)) {
+            try {
+                val conn = (URL(url).openConnection() as HttpURLConnection).apply {
+                    instanceFollowRedirects = false
+                    connectTimeout = 10_000
+                    readTimeout = 10_000
+                    setRequestProperty("User-Agent", ua)
+                }
+                try {
+                    val code = conn.responseCode
+                    if (code in 300..399) {
+                        val location = conn.getHeaderField("Location")?.let { URL(URL(url), it).toString() }
+                        if (location != null && Uri.parse(location).host?.lowercase() !in STORES) return location
+                    } else if (code in 200..299) {
+                        val html = conn.inputStream.bufferedReader().use { r ->
+                            val buf = CharArray(300_000)
+                            val n = r.read(buf)
+                            if (n > 0) String(buf, 0, n) else ""
+                        }
+                        VIDEO_IN_HTML.find(html.replace("\\u002F", "/").replace("\\/", "/"))?.let { return it.value }
+                    }
+                } finally {
+                    conn.disconnect()
+                }
+            } catch (_: Exception) {
+            }
         }
-        try {
-            if (conn.responseCode in 300..399) {
-                conn.getHeaderField("Location")?.let { URL(URL(url), it).toString() }
-            } else null
-        } finally {
-            conn.disconnect()
-        }
-    } catch (_: Exception) {
-        null
+        return null
     }
+
+    private val VIDEO_IN_HTML = Regex("""https://(?:www|m)\.tiktok\.com/@[^"'\s/?]+/(?:video|photo)/\d{8,}""")
 
     /** Deja los enlaces de TikTok en su forma canónica, que es la que entienden todas las APIs. */
     private fun normalize(url: String): String {
