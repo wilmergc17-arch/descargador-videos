@@ -32,8 +32,25 @@ object OkRuApi {
             try {
                 val html = clean(Http.get(page, mapOf("User-Agent" to ua, "Accept-Language" to "es,en;q=0.8")))
                 val urls = CDN_URL.findAll(html).map { it.value.trimEnd(',', ';') }.distinct().toList()
-                val direct = urls.filter { !it.contains(".m3u8") && !it.contains(".mpd") && it.contains("type=") }
                 hls = hls ?: urls.firstOrNull { it.contains(".m3u8") }
+                    ?: Regex(""""(?:hlsManifestUrl|ondemandHls|hlsMasterPlaylistUrl)"\s*:\s*"([^"]+)"""").find(html)?.groupValues?.get(1)
+                // Videos: servidores vdNN.okcdn.ru / vdNN.mycdn.me (las imágenes vienen de otros servidores).
+                val direct = urls.filter { u ->
+                    !u.contains(".m3u8") && !u.contains(".mpd") &&
+                        (u.contains("type=") || Regex("""^https://vd[0-9a-z-]*\.""").containsMatchIn(u))
+                }.toMutableList()
+                // Versión móvil: el video se sirve por un enlace de redirección de m.ok.ru.
+                Regex("""https://m\.ok\.ru/dk\?st\.cmd=moviePlaybackRedirect[^"'\s<>]+""").findAll(html)
+                    .forEach { direct += it.value }
+                // Reproductor de escritorio: los datos pueden venir aparte, en metadataUrl.
+                if (direct.isEmpty()) {
+                    Regex(""""metadataUrl"\s*:\s*"([^"]+)"""").find(html)?.groupValues?.get(1)?.let { meta ->
+                        val metaHtml = clean(Http.postForm(if (meta.startsWith("http")) meta else "https://ok.ru$meta", ""))
+                        CDN_URL.findAll(metaHtml).map { it.value }.filter { it.contains("type=") || it.contains("vd") }
+                            .forEach { direct += it }
+                        hls = hls ?: Regex(""""(?:hlsManifestUrl|ondemandHls)"\s*:\s*"([^"]+)"""").find(metaHtml)?.groupValues?.get(1)
+                    }
+                }
                 val best = direct.maxByOrNull { quality(it) }
                 if (best != null) {
                     val title = Regex("""<title>([^<]*)</title>""").find(html)?.groupValues?.get(1)
@@ -41,7 +58,10 @@ object OkRuApi {
                     Http.save(best, file, onProgress, mapOf("Referer" to "https://ok.ru/", "User-Agent" to ua))
                     return listOf(file)
                 }
-                errors += "${Uri.parse(page).host}: sin enlaces (${urls.size} del CDN)"
+                val hosts = urls.mapNotNull { Uri.parse(it).host }.distinct().take(3).joinToString()
+                val hint = listOf("заблокирован", "недоступ", "blocked", "unavailable", "private", "Войдите", "login")
+                    .firstOrNull { html.contains(it, true) }?.let { ", página dice: $it" } ?: ""
+                errors += "${Uri.parse(page).host}: sin video (${urls.size} enlaces: $hosts$hint)"
             } catch (e: InterruptedException) {
                 throw e
             } catch (e: Exception) {
