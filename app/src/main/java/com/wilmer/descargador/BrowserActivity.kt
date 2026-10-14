@@ -78,6 +78,8 @@ class BrowserActivity : AppCompatActivity() {
             else -> "https://www.google.com/search?q=" + Uri.encode(text)
         }
         address.setText(url)
+        // TikTok manda a la Play Store a los navegadores de móvil; como escritorio muestra el video.
+        web.settings.userAgentString = if (Uri.parse(url).host?.contains("tiktok") == true) DESKTOP_UA else null
         web.loadUrl(url)
     }
 
@@ -120,9 +122,9 @@ class BrowserActivity : AppCompatActivity() {
         }
 
         override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
-            // Evita que anuncios abran otras apps o la Play Store.
+            // Evita que anuncios o la propia red abran otras apps o la Play Store.
             val scheme = request.url.scheme
-            return scheme != "http" && scheme != "https"
+            return (scheme != "http" && scheme != "https") || Links.isAppStore(request.url.toString())
         }
 
         override fun onPageFinished(view: WebView, url: String) {
@@ -148,6 +150,8 @@ class BrowserActivity : AppCompatActivity() {
 
     companion object {
         private const val EXTRA_URL = "url"
+        private const val DESKTOP_UA =
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
 
         private val MEDIA = Regex(
             """\.(mp4|m4v|mov|webm|m3u8|mpd)(\?|#|$)|mime=video|/videoplayback\?""", RegexOption.IGNORE_CASE

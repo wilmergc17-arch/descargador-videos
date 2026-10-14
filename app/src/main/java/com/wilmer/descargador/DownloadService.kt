@@ -80,7 +80,9 @@ class DownloadService : Service() {
         super.onDestroy()
     }
 
-    private fun download(url: String, audioOnly: Boolean, referer: String?) {
+    private fun download(sharedUrl: String, audioOnly: Boolean, referer: String?) {
+        if (referer == null) showProgress("Abriendo enlace…", -1)
+        val url = if (referer == null) Links.resolve(sharedUrl) else sharedUrl
         val jobId = UUID.randomUUID().toString()
         val dir = File(cacheDir, "descargas/$jobId").apply { mkdirs() }
         var lastUpdate = 0L
@@ -130,7 +132,12 @@ class DownloadService : Service() {
             if (files.isEmpty()) {
                 // El error de yt-dlp es el más informativo; los demás van como referencia.
                 val main = errors.firstOrNull { it.first == "yt-dlp" }?.second ?: errors.firstOrNull()?.second
-                notifyFailure(url, referer, main?.let { friendlyError(it) } ?: "No se encontró ningún archivo")
+                // Resumen de cada método para poder diagnosticar desde una captura.
+                val others = errors.filter { it.second !== main }
+                    .joinToString("\n") { (name, e) -> "• $name: ${e.message?.lines()?.lastOrNull { it.isNotBlank() }?.take(120)}" }
+                val message = (main?.let { friendlyError(it) } ?: "No se encontró ningún archivo") +
+                        (if (others.isNotEmpty()) "\n\n$others" else "")
+                notifyFailure(url, referer, message)
                 return
             }
             showProgress("Guardando en la galería…", -1)

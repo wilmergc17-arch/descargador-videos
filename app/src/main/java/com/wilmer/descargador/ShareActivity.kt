@@ -20,11 +20,3 @@ class ShareActivity : AppCompatActivity() {
         finish()
     }
 }
-
-object Links {
-    private val URL = Regex("""https?://\S+""")
-
-    /** Las apps comparten a veces texto extra ("Mira este video… https://…"); nos quedamos con el primer enlace. */
-    fun extract(text: String?): String? =
-        text?.let { URL.find(it)?.value?.trimEnd('.', ',', ')', '"', '\'') }
-}
