@@ -1,0 +1,15 @@
+<resources>
+    <style name="Theme.Descargador" parent="Theme.AppCompat.DayNight.DarkActionBar">
+        <item name="colorPrimary">#E53935</item>
+        <item name="colorPrimaryDark">#B71C1C</item>
+        <item name="colorAccent">#E53935</item>
+    </style>
+
+    <style name="Theme.Descargador.Invisible" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
+</resources>
