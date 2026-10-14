@@ -14,7 +14,7 @@ object Links {
 
     private val STORES = setOf("play.google.com", "apps.apple.com", "itunes.apple.com", "market.android.com")
     private val SHORTENERS = setOf(
-        "vm.tiktok.com", "vt.tiktok.com", "t.tiktok.com", "lite.tiktok.com", "t.co", "fb.watch",
+        "vm.tiktok.com", "vt.tiktok.com", "t.tiktok.com", "lite.tiktok.com", "tt.site", "t.co", "fb.watch",
         "bit.ly", "tinyurl.com", "pin.it", "redd.it", "on.soundcloud.com", "ok.me",
     )
     private val TIKTOK_ID = Regex("""/(video|photo|v)/(\d{8,})""")
@@ -46,7 +46,7 @@ object Links {
         val host = uri.host?.lowercase()?.removePrefix("www.") ?: return false
         if (host in SHORTENERS) return true
         val path = uri.path.orEmpty()
-        return host.endsWith("tiktok.com") && !TIKTOK_ID.containsMatchIn(path)
+        return isTikTokHost(host) && !TIKTOK_ID.containsMatchIn(path)
     }
 
     /** Siguiente salto de la redirección; si la página responde 200, busca dentro el enlace real del video. */
@@ -98,7 +98,7 @@ object Links {
     /** Deja los enlaces de TikTok en su forma canónica, que es la que entienden todas las APIs. */
     private fun normalize(url: String): String {
         val uri = Uri.parse(url)
-        if (uri.host?.lowercase()?.endsWith("tiktok.com") == true) {
+        if (isTikTokHost(uri.host)) {
             TIKTOK_ID.find(uri.path.orEmpty())?.let { m ->
                 val user = Regex("""/@([^/]+)""").find(uri.path.orEmpty())?.groupValues?.get(1) ?: "i"
                 val kind = if (m.groupValues[1] == "photo") "photo" else "video"
@@ -106,6 +106,14 @@ object Links {
             }
         }
         return url
+    }
+
+    /** Dominios con los que TikTok comparte enlaces (cambian según la versión y el país). */
+    private val TIKTOK_DOMAINS = listOf("tiktok.com", "tt.site", "tiktokv.com", "tiktok.us")
+
+    fun isTikTokHost(host: String?): Boolean {
+        val h = host?.lowercase()?.removePrefix("www.") ?: return false
+        return TIKTOK_DOMAINS.any { h == it || h.endsWith(".$it") }
     }
 
     fun isAppStore(url: String): Boolean = Uri.parse(url).host?.lowercase() in STORES

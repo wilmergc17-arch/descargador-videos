@@ -94,10 +94,25 @@ class DownloadService : Service() {
             }
         }
 
+        var tikTokFromYtDlp: String? = null
         val methods = buildList<Pair<String, () -> Unit>> {
             if (referer == null && (TikTokApi.handles(url) || TikTokApi.handles(sharedUrl))) add("TikTok" to { TikTokApi.download(if (TikTokApi.handles(url)) url else sharedUrl, dir, onProgress); Unit })
             if (referer == null && !audioOnly && XApi.handles(url)) add("X" to { XApi.download(url, dir, onProgress); Unit })
-            add("yt-dlp" to { runYtDlp(url, audioOnly, referer, dir, jobId, onProgress); Unit })
+            add("yt-dlp" to {
+                try {
+                    runYtDlp(url, audioOnly, referer, dir, jobId, onProgress)
+                } catch (e: Exception) {
+                    tikTokFromYtDlp = TikTokApi.urlFromYtDlpError(e.message)
+                    throw e
+                }
+                Unit
+            })
+            // Si yt-dlp reconoció un TikTok que no se detectó por el enlace, se prueba la API sin cuenta con su id.
+            if (referer == null && !(TikTokApi.handles(url) || TikTokApi.handles(sharedUrl))) add("TikTok por id" to {
+                val tiktokUrl = tikTokFromYtDlp ?: throw java.io.IOException("no aplica")
+                TikTokApi.download(tiktokUrl, dir, onProgress)
+                Unit
+            })
             if (referer == null) {
                 add("respaldo" to { CobaltApi.download(this@DownloadService, url, audioOnly, dir, onProgress); Unit })
             } else {

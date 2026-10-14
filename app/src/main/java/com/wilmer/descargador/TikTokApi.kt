@@ -13,10 +13,13 @@ import java.net.URLEncoder
 object TikTokApi {
     private const val BASE = "https://www.tikwm.com"
 
-    fun handles(url: String): Boolean {
-        val host = Uri.parse(url).host?.lowercase()
-        return host == "tiktok.com" || host?.endsWith(".tiktok.com") == true || url.contains("tiktok.com/", true)
-    }
+    fun handles(url: String): Boolean =
+        Links.isTikTokHost(Uri.parse(url).host) || url.contains("tiktok.com/", true) || url.contains("tt.site/", true)
+
+    /** yt-dlp a veces reconoce el video aunque no pueda bajarlo ("[TikTok] 7692…"); con ese id armamos el enlace web. */
+    fun urlFromYtDlpError(message: String?): String? =
+        message?.let { Regex("""\[TikTok\] (\d{8,})""").find(it) }?.groupValues?.get(1)
+            ?.let { "https://www.tiktok.com/@i/video/$it" }
 
     /** Prueba tikwm (GET y POST) y luego tiklydown; devuelve el primer resultado que funcione. */
     fun download(url: String, dir: File, onProgress: (Int) -> Unit): List<File> {
