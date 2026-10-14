@@ -58,6 +58,8 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "Sesiones cerradas", Toast.LENGTH_SHORT).show()
         }
 
+        findViewById<Button>(R.id.report).setOnClickListener { startActivity(ReportActivity.intent(this, null)) }
+
         findViewById<Button>(R.id.update).setOnClickListener { button ->
             button.isEnabled = false
             versionText.text = "Actualizando…"

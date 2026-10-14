@@ -106,6 +106,13 @@
             android:text="Cerrar todas las sesiones" />
 
         <Button
+            android:id="@+id/report"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="Ver informe del último error" />
+
+        <Button
             android:id="@+id/update"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

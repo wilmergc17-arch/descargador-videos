@@ -109,14 +109,24 @@ class DownloadService : Service() {
             }
         }
 
+        val log = StringBuilder()
+        log.append("Descargar Video ${BuildConfig.VERSION_NAME} · Android ${Build.VERSION.RELEASE}\n")
+        log.append("Compartido: $sharedUrl\n")
+        log.append("Enlace usado: $url\n")
+        log.append("Métodos: ${methods.joinToString { it.first }}\n\n")
+
         try {
             val errors = mutableListOf<Pair<String, Exception>>()
             for ((name, method) in methods) {
                 if (cancelled) throw InterruptedException()
                 try {
+                    log.append("▶ $name\n")
                     showProgress(if (errors.isEmpty()) "Descargando…" else "Probando otro método…", -1)
                     method()
-                    if (downloadedFiles(dir).isNotEmpty()) break
+                    if (downloadedFiles(dir).isNotEmpty()) {
+                        log.append("✓ $name\n")
+                        break
+                    }
                     throw java.io.IOException("terminó sin archivos")
                 } catch (e: YoutubeDL.CanceledException) {
                     throw e
@@ -124,6 +134,7 @@ class DownloadService : Service() {
                     throw e
                 } catch (e: Exception) {
                     if (cancelled) throw InterruptedException()
+                    log.append("✗ $name: ${e.javaClass.simpleName}: ${e.message?.take(1500)}\n\n")
                     errors += name to e
                     dir.listFiles()?.forEach { it.deleteRecursively() }
                 }
@@ -131,15 +142,10 @@ class DownloadService : Service() {
 
             val files = downloadedFiles(dir)
             if (files.isEmpty()) {
-                // El error de yt-dlp es el más informativo; los demás van como referencia.
+                // El error de yt-dlp es el más informativo para el resumen; el informe completo va aparte.
                 val main = errors.firstOrNull { it.first == "yt-dlp" }?.second ?: errors.firstOrNull()?.second
-                // Resumen de cada método para poder diagnosticar desde una captura.
-                val others = errors.filter { it.second !== main }
-                    .joinToString("\n") { (name, e) -> "• $name: ${e.message?.lines()?.lastOrNull { it.isNotBlank() }?.take(200)}" }
-                val tried = "Probado: ${methods.joinToString { it.first }}\nEnlace: $sharedUrl" +
-                        (if (url != sharedUrl) " → $url" else "")
-                val message = (main?.let { friendlyError(it) } ?: "No se encontró ningún archivo") +
-                        (if (others.isNotEmpty()) "\n\n$others" else "") + "\n\n$tried"
+                val message = main?.let { friendlyError(it) } ?: "No se encontró ningún archivo"
+                ReportActivity.file(this).writeText(log.toString())
                 notifyFailure(url, referer, message)
                 return
             }
@@ -152,6 +158,8 @@ class DownloadService : Service() {
         } catch (_: InterruptedException) {
             notifyResult("Descarga cancelada", url, null)
         } catch (e: Exception) {
+            log.append("✗ error general: ${e.javaClass.simpleName}: ${e.message?.take(1500)}\n")
+            ReportActivity.file(this).writeText(log.toString())
             notifyFailure(url, referer, friendlyError(e))
         } finally {
             currentId = null
@@ -251,16 +259,14 @@ class DownloadService : Service() {
     }
 
     /** Si nada funcionó, ofrece abrir la página en el navegador de la app para buscar el video a mano. */
+    /** Al tocar la notificación se abre el informe completo, con botones para copiarlo o buscar en el navegador. */
     private fun notifyFailure(url: String, referer: String?, message: String) {
-        val browse = if (referer == null) {
-            PendingIntent.getActivity(
-                this, url.hashCode(),
-                BrowserActivity.intent(this, url).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                PendingIntent.FLAG_IMMUTABLE
-            )
-        } else null
-        val text = if (browse != null) "$message\n\nToca para buscar el video en el navegador de la app." else message
-        notifyResult("No se pudo descargar", text, browse)
+        val open = PendingIntent.getActivity(
+            this, url.hashCode(),
+            ReportActivity.intent(this, if (referer == null) url else null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+        notifyResult("No se pudo descargar", "${message.take(300)}\n\nToca para ver el informe completo.", open)
     }
 
     @SuppressLint("MissingPermission")
