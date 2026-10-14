@@ -21,7 +21,9 @@ class ReportActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         title = "Informe de la descarga"
         val report = file(this).takeIf { it.exists() }?.readText() ?: "Todavía no hay ningún informe."
+        // Desde la pantalla principal no llega el enlace: se toma del propio informe.
         val url = intent.getStringExtra(EXTRA_URL)
+            ?: Regex("""Enlace usado: (\S+)""").find(report)?.groupValues?.get(1)
 
         val text = TextView(this).apply {
             this.text = report

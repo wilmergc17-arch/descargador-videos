@@ -10,6 +10,7 @@ import android.webkit.CookieManager
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 
 /** Abre la web de la red para iniciar sesión; al salir guarda las cookies para yt-dlp. */
@@ -19,7 +20,7 @@ class LoginActivity : AppCompatActivity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        title = "Inicia sesión y pulsa Listo"
+        title = "Entra con correo o teléfono y pulsa Listo"
         web = WebView(this)
         web.settings.javaScriptEnabled = true
         web.settings.domStorageEnabled = true
@@ -31,6 +32,16 @@ class LoginActivity : AppCompatActivity() {
         web.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 val url = request.url.toString()
+                // Google y Apple bloquean sus inicios de sesión dentro de otras apps: la pantalla se queda en blanco.
+                val host = request.url.host.orEmpty()
+                if (host.endsWith("accounts.google.com") || host.endsWith("appleid.apple.com")) {
+                    Toast.makeText(
+                        this@LoginActivity,
+                        "Google no permite iniciar sesión dentro de otras apps. Entra con tu correo o teléfono y contraseña.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    return true
+                }
                 return !url.startsWith("http") || Links.isAppStore(url)
             }
         }
