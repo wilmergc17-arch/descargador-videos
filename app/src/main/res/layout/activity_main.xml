@@ -12,7 +12,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Comparte cualquier video desde TikTok, Instagram, Facebook, X o YouTube y elige «Descargar video». También puedes pegar el enlace aquí."
+            android:text="Comparte un video desde cualquier app o navegador y elige «Descargar video». También puedes pegar el enlace aquí."
             android:textSize="15sp" />
 
         <EditText
@@ -48,6 +48,19 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Solo audio (MP3)" />
+
+        <Button
+            android:id="@+id/browser"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Buscar video en cualquier página" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Funciona con más de 1.800 sitios (Ok.ru, VK, Dailymotion, Vimeo, Twitch, Reddit, Pinterest…). Si una página no se reconoce, ábrela con el botón de arriba, dale play al video y descárgalo."
+            android:textSize="13sp" />
 
         <TextView
             android:layout_width="match_parent"
