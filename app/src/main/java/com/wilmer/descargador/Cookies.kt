@@ -14,6 +14,7 @@ object Cookies {
         "facebook" to "https://www.facebook.com",
         "x" to "https://x.com",
         "tiktok" to "https://www.tiktok.com/login",
+        "okru" to "https://ok.ru",
     )
 
     private fun file(context: Context) = File(context.filesDir, "cookies.txt")
@@ -37,6 +38,9 @@ object Cookies {
         }
         file(context).writeText(lines.toString())
     }
+
+    /** Cabecera Cookie de la sesión guardada para ese sitio (vacía si no inició sesión). */
+    fun header(url: String): String? = runCatching { CookieManager.getInstance().getCookie(url) }.getOrNull()
 
     fun clear(context: Context) {
         CookieManager.getInstance().removeAllCookies(null)

@@ -30,7 +30,10 @@ object OkRuApi {
         var hls: String? = null
         for ((page, ua) in pages) {
             try {
-                val html = clean(Http.get(page, mapOf("User-Agent" to ua, "Accept-Language" to "es,en;q=0.8")))
+                // Si el usuario inició sesión en Ok.ru dentro de la app, se usan sus cookies (videos privados o con edad).
+                val headers = mutableMapOf("User-Agent" to ua, "Accept-Language" to "es,en;q=0.8")
+                Cookies.header(page)?.let { headers["Cookie"] = it }
+                val html = clean(Http.get(page, headers))
                 val urls = CDN_URL.findAll(html).map { it.value.trimEnd(',', ';') }.distinct().toList()
                 hls = hls ?: urls.firstOrNull { it.contains(".m3u8") }
                     ?: Regex(""""(?:hlsManifestUrl|ondemandHls|hlsMasterPlaylistUrl)"\s*:\s*"([^"]+)"""").find(html)?.groupValues?.get(1)

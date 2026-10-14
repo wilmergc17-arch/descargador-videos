@@ -82,6 +82,12 @@
             android:text="TikTok (videos para mayores de 18)" />
 
         <Button
+            android:id="@+id/loginOkru"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Ok.ru (videos privados o restringidos)" />
+
+        <Button
             android:id="@+id/loginInstagram"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
