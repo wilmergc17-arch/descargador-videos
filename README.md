@@ -8,3 +8,9 @@ App Android personal que replica el atajo de iOS "Snap Video": comparte un video
 
 ## Instalar
 Cada push a `main` compila el APK en GitHub Actions y lo publica en **Releases** (`DescargarVideo.apk`). Ábrelo desde el teléfono y permite "instalar apps desconocidas".
+
+## Para PC (Windows)
+La carpeta `pc/` tiene la versión de escritorio (Python + yt-dlp + ffmpeg, mismos métodos de respaldo que en Android).
+GitHub Actions la compila y la publica en **Releases** como `pc-v1.0.N`:
+- `DescargarVideo-Instalador.exe` (recomendado) o `DescargarVideo-Portable.zip`.
+- Copia el enlace de un video con la app abierta y se descarga solo en `Descargas\Descargar Video`.

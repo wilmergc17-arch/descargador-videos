@@ -1,0 +1,8 @@
+bin/
+build/
+dist/
+salida/
+version.py
+selftest.txt
+*.spec
+__pycache__/
